@@ -12,19 +12,11 @@ class App extends Component {
 }
 
 class Users extends Component {
-    // update = (data) => {
-    //     this.setState({name: data,
-    //         surname: data,
-    //         dailyTime: data,
-    //         totalTime: data})
-    // };
-    state = {
-      users : []
-    };
     render() {
-        return (<>
+        return (
+            <>
                 <AddUser/>
-                <UserList />
+                <UserList/>
             </>
         )
     }
@@ -46,22 +38,25 @@ class AddUser extends Component {
         if (this.state.show) {
             return (
                 <>
-                    <button className={"user__toggleFormBtn"} onClick={this.showForm}>+</button>
+                    <button className={"user__toggleFormBtn"} onClick={this.showForm}></button>
                     <AddUserForm/>
                 </>
             )
         } else {
-            return <button className={"user__toggleFormBtn"} onClick={this.showForm}>+</button>
+            return <button className={"user__toggleFormBtn"} onClick={this.showForm}></button>
         }
     }
 }
 
 class AddUserForm extends Component {
     state = {
+        userId : "",
         name: "",
         surname: "",
         dailyTime: 0,
-        totalTime: 0
+        totalTime: 0,
+        extra: 0,
+        minus: 0
     };
 
     inputHandler = (e) => {
@@ -71,10 +66,16 @@ class AddUserForm extends Component {
     };
     add = (e) => {
         e.preventDefault();
+        if ((this.state.name === "") || (this.state.surname === "")) {
+            return alert("Pola Imię oraz Nazwisko muszą być uzupełnione!")
+        } else {
+            db.collection(`users`).add(this.state)
+        }
     };
+
     render() {
         return (
-            <form className={"user__form"}>
+            <form className={"user__form"} onSubmit={this.add}>
                 <label> Imię
                     <input onChange={this.inputHandler} name="name" type="text"/>
                 </label>
@@ -84,23 +85,60 @@ class AddUserForm extends Component {
                 <label> Wymiar pracy
                     <input onChange={this.inputHandler} name="dailyTime" type="number"/>
                 </label>
-                <button onSubmit={this.props.add}>Dodaj</button>
+                <button>Dodaj</button>
             </form>
         )
     }
 }
 
 class UserList extends Component {
+    state = {
+        users: [],
+    };
+    edit =()=>{
+
+    };
+    delete =()=> {
+
+    };
+    renderUsers = () => {
+        return this.state.users.map((el) => {
+            return (
+                <li data-id = {el.ids}>
+                    <div>{el.name}</div>
+                    <div>{el.surname}</div>
+                    <div>{el.dailyTime}</div>
+                    <div>{el.extra}</div>
+                    <div>{el.minus}</div>
+                    <div>{el.totalTime}</div>
+                    <button onClick={this.edit}>Edit</button>
+                    <button onClick={this.delete}>Delete</button>
+                </li>
+            )
+        });
+    };
+
     render() {
+
         return (
-            <div>
-                <h3>{this.props.name} </h3>
-                <h3>{this.props.surname}</h3>
-                <h4>{this.props.totalTime}</h4>
-            </div>
+            <ul>
+                {this.renderUsers()}
+            </ul>
         )
     }
+    componentDidMount() {
+        const collection = db.collection(`users`).get().then((el) => {
+                el.docs.forEach(doc => {
+                    this.setState({
+                        users: this.state.users.concat(doc.data()),
+                    });
+                })
+            }
+        );
+    }
 }
+
+
 
 
 ReactDOM.render(<App/>, document.getElementById("app"));
