@@ -1,24 +1,24 @@
 import React, {Component} from "react";
 import ReactDOM from "react-dom";
-import DatePicker from 'react-date-picker'
 import Calendar from 'react-calendar';
 
 class App extends Component {
     render() {
         return (
-            <div className={"user__bg"}>
-                <Caltoggle/>
-                <div className={"user__container"}>
-                    <Users/>
-                </div>
-            </div>
+           <>
+                <Calendartoggle/>
+                <Users/>
+            </>
         )
     }
 }
 
-class Caltoggle extends Component {
+class Calendartoggle extends Component {
     state = {
-        show: false
+        show: true
+    };
+    getDate =()=> {
+      this.setState({date : this.state.value})
     };
     toggle = () => {
         this.setState({show: !this.state.show})
@@ -35,7 +35,8 @@ class Caltoggle extends Component {
                     <div>
                         <button onClick={this.showFCal}> ></button>
                     </div>
-                    <CalMod/>
+                    <CalendarPart />
+                    <CalendarEvents/>
                 </>
             )
         } else {
@@ -48,18 +49,7 @@ class Caltoggle extends Component {
     }
 }
 
-class CalMod extends Component {
-    render() {
-        return (
-            <>
-                <Cal/>
-                {/*<CalList/>*/}
-            </>
-        )
-    }
-}
-
-class Cal extends Component {
+class CalendarPart extends Component {
     state = {
         date: new Date(),
     };
@@ -77,24 +67,134 @@ class Cal extends Component {
     }
 }
 
-class CalList extends Component {
-    renderEvents = () => {
-        return this.props.map((el) => {
-            return <li>{el}</li>
+class CalendarEvents extends Component {
+    render() {
+        return (
+            <>
+                <CalendarDate date = {this.props.value}/>
+                <AddEvent/>
+            </>
+        )
+    }
+}
+
+class CalendarDate extends Component {
+    render() {
+        console.log(this.props);
+        return (
+            <h1>Data</h1>
+        )
+    }
+}
+
+class AddEvent extends Component {
+    state = {
+        show: false
+    };
+    toggle = () => {
+        this.setState({show: !this.state.show})
+    };
+    showForm = (e) => {
+        e.preventDefault();
+        this.toggle();
+    };
+
+    render() {
+        if (this.state.show) {
+            return (
+                <>
+                    <button className={"user__toggleFormBtn"} onClick={this.showForm}></button>
+                    <EventForm users={this.props.users}/>
+                </>
+            )
+        } else {
+            return <button className={"user__toggleFormBtn"} onClick={this.showForm}></button>
+        }
+    }
+}
+
+class EventForm extends Component {
+    state = {
+        date: "",
+        inPlus: "",
+        inMinus: "",
+        count: 0
+    };
+    selectPerson1 = () => {
+        return this.props.users.map((el) => {
+            return (
+                <option key={el}> {el.data().name} {el.data().surname}</option>
+            )
         })
+    };
+    selectPerson2 = () => {
+        return this.props.users.map((el) => {
+            return (
+                <option key={el}> {el.data().name} {el.data().surname}</option>
+            )
+        })
+    };
+    inputHandler = (e) => {
+        this.setState({[e.target.name]: e.target.value})
+    };
+    hoursHandler = (e) => {
+        this.setState({[e.target.name]: e.target.value})
+    };
+    submitHandler = (e) => {
+        if (this.state.inPlus === this.state.inMinus) {
+            e.preventDefault();
+            alert("Pola osoby zastępującej i zastępowanej nie mogą mieć tej samej wartości")
+        }
+        if ((this.state.count === "") || (this.state.count <= 0)) {
+            e.preventDefault();
+            alert("Pole godzin nie może być puste ani mniejsze od 0!")
+        } else {
+            e.preventDefault();
+            db.collection(`sub`).add(this.state);
+            alert("Dodano nowe zastępstwo!")
+        }
     };
 
     render() {
         return (
             <>
-                <h1>{this.props.date}</h1>
-                <ul>
-                    {this.renderEvents()}
-                </ul>
+                <Picker/>
+                <form action="">
+                    <label>Zastępowany
+                        <select name="inMinus" id="" onChange={this.inputHandler}>{this.selectPerson1()}</select>
+                    </label>
+                    <input name="count" id="" onChange={this.hoursHandler}>
+                    </input>
+                    <label>Zastępujący
+                        <select name="inPlus" id="" onChange={this.inputHandler}>{this.selectPerson2()}</select>
+                    </label>
+                    <button onClick={this.submitHandler}>Zatwierdź</button>
+                </form>
+                <SubstituteList/>
             </>
         )
     }
 }
+
+// class EventList extends Component {
+//     renderEvents = () => {
+//         return this.props.map((el) => {
+//             return <li>{el.data()}</li>
+//         })
+//     };
+//
+//     render() {
+//         return (
+//             <>
+//                 <h1>Data</h1>
+//                     {/*{this.props.data().date}*/}
+//                 <ul>
+//                     {this.renderEvents()}
+//                 </ul>
+//             </>
+//         )
+//     }
+// }
 
 class Users extends Component {
     render() {
@@ -226,7 +326,7 @@ class UserList extends Component {
                 <ul>
                     {this.renderUsers()}
                 </ul>
-                <AddSubstitute users={this.state.users}/>
+                <AddEvent users={this.state.users}/>
             </div>
         )
     }
@@ -263,113 +363,25 @@ class UserList extends Component {
 //     }
 // }
 
-class AddSubstitute extends Component {
-    state = {
-        show: false
-    };
-    toggle = () => {
-        this.setState({show: !this.state.show})
-    };
-    showForm = (e) => {
-        e.preventDefault();
-        this.toggle();
-    };
 
-    render() {
-        if (this.state.show) {
-            return (
-                <>
-                    <button className={"user__toggleFormBtn"} onClick={this.showForm}></button>
-                    <SubstituteForm users={this.props.users}/>
-                </>
-            )
-        } else {
-            return <button className={"user__toggleFormBtn"} onClick={this.showForm}></button>
-        }
-    }
-}
-
-class Picker extends Component {
-    state = {
-        date: new Date(),
-    };
-
-    onChange = date => this.setState({date});
-
-    render() {
-        return (
-            <div>
-                <DatePicker
-                    onChange={this.onChange}
-                    value={this.state.date}
-                />
-            </div>
-        );
-    }
-}
-
-class SubstituteForm extends Component {
-    state = {
-        date: "",
-        inPlus: "",
-        inMinus: "",
-        count: 0
-    };
-    selectPerson1 = () => {
-        return this.props.users.map((el) => {
-            return (
-                <option key={el}> {el.data().name} {el.data().surname}</option>
-            )
-        })
-    };
-    selectPerson2 = () => {
-        return this.props.users.map((el) => {
-            return (
-                <option key={el}> {el.data().name} {el.data().surname}</option>
-            )
-        })
-    };
-    inputHandler = (e) => {
-        this.setState({[e.target.name]: e.target.value})
-    };
-    hoursHandler = (e) => {
-        this.setState({[e.target.name]: e.target.value})
-    };
-    submitHandler = (e) => {
-        if (this.state.inPlus === this.state.inMinus) {
-            e.preventDefault();
-            alert("Pola osoby zastępującej i zastępowanej nie mogą mieć tej samej wartości")
-        }
-        if ((this.state.count === "") || (this.state.count <= 0)) {
-            e.preventDefault();
-            alert("Pole godzin nie może być puste ani mniejsze od 0!")
-        } else {
-            e.preventDefault();
-            db.collection(`sub`).add(this.state);
-            alert("Dodano nowe zastępstwo!")
-        }
-    };
-
-    render() {
-        return (
-            <>
-                <Picker/>
-                <form action="">
-                    <label>Zastępowany
-                        <select name="inMinus" id="" onChange={this.inputHandler}>{this.selectPerson1()}</select>
-                    </label>
-                    <input name="count" id="" onChange={this.hoursHandler}>
-                    </input>
-                    <label>Zastępujący
-                        <select name="inPlus" id="" onChange={this.inputHandler}>{this.selectPerson2()}</select>
-                    </label>
-                    <button onClick={this.submitHandler}>Zatwierdź</button>
-                </form>
-                <SubstituteList/>
-            </>
-        )
-    }
-}
+// class Picker extends Component {
+//     state = {
+//         date: new Date(),
+//     };
+//
+//     onChange = date => this.setState({date});
+//
+//     render() {
+//         return (
+//             <div>
+//                 <DatePicker
+//                     onChange={this.onChange}
+//                     value={this.state.date}
+//                 />
+//             </div>
+//         );
+//     }
+// }
 
 class SubstituteList extends Component {
     state = {
@@ -403,6 +415,7 @@ class SubstituteList extends Component {
     componentDidMount() {
         const collection = db.collection(`sub`).get().then((el) => {
                 el.docs.map((doc) => {
+                    console.log(doc.data());
                     this.setState({
                         sub: this.state.sub.concat(doc),
                     });
