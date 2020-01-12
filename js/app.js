@@ -3,9 +3,15 @@ import ReactDOM from "react-dom";
 import Calendar from 'react-calendar';
 
 class App extends Component {
+    state = {
+      users : []
+    };
+    getUsers = (users) => {
+        this.setState({users : users })
+    };
     render() {
         return (
-           <>
+            <>
                 <Calendartoggle/>
                 <Users/>
             </>
@@ -17,13 +23,10 @@ class Calendartoggle extends Component {
     state = {
         show: true
     };
-    getDate =()=> {
-      this.setState({date : this.state.value})
-    };
     toggle = () => {
         this.setState({show: !this.state.show})
     };
-    showFCal = (e) => {
+    showCalendar = (e) => {
         e.preventDefault();
         this.toggle();
     };
@@ -33,16 +36,15 @@ class Calendartoggle extends Component {
             return (
                 <>
                     <div>
-                        <button onClick={this.showFCal}> ></button>
+                        <button onClick={this.showCalendar}> ></button>
                     </div>
-                    <CalendarPart />
-                    <CalendarEvents/>
+                    <CalendarPart/>
                 </>
             )
         } else {
             return (
                 <div>
-                    <button onClick={this.showFCal}> ></button>
+                    <button onClick={this.showCalendar}> ></button>
                 </div>
             )
         }
@@ -57,11 +59,11 @@ class CalendarPart extends Component {
 
     render() {
         return (
-            <div>
+            <div className={"calendarPart"}>
                 <Calendar
                     onChange={this.onChange}
-                    value={this.state.date}
-                />
+                    value={this.state.date}/>
+                <CalendarEvents head={this.state.date}/>
             </div>
         );
     }
@@ -70,19 +72,51 @@ class CalendarPart extends Component {
 class CalendarEvents extends Component {
     render() {
         return (
-            <>
-                <CalendarDate date = {this.props.value}/>
+            <div className={"calendarEvents"}>
+                <CalendarDate date={this.props.head}/>
                 <AddEvent/>
-            </>
+                <CalendarEventList/>
+            </div>
         )
     }
 }
 
 class CalendarDate extends Component {
-    render() {
-        console.log(this.props);
+    state = {
+        date: "",
+    };
+    formatDate = () => {
+        const day = this.props.date.toLocaleDateString().split(`.`)[0];
+        const  dayNames = [
+            "Niedz",
+            "Pon",
+            "Wt",
+            "Śr",
+            "Czw",
+            "Pt",
+            "Sob"
+        ];
+        const name = dayNames[this.props.date.getDay()];
         return (
-            <h1>Data</h1>
+            <>
+            <h2>{name}</h2>
+            <h3>{day}</h3>
+            </>
+        )
+    };
+    render() {
+        return (
+            <div>{this.formatDate()}</div>
+        )
+    }
+}
+
+class CalendarEventList extends Component {
+    render() {
+        return (
+            <ul>
+                <li> lista</li>
+            </ul>
         )
     }
 }
@@ -326,7 +360,6 @@ class UserList extends Component {
                 <ul>
                     {this.renderUsers()}
                 </ul>
-                <AddEvent users={this.state.users}/>
             </div>
         )
     }
