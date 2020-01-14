@@ -158,12 +158,13 @@ class EventForm extends Component {
         users: []
     };
     setDate = () => {
-        this.setState({date: this.props.date})
+        const date = this.props.date.toLocaleDateString();
+        this.setState({date: {date}})
     };
     selectPerson1 = () => {
         return this.state.users.map((el) => {
             return (
-                <option key={el}> {el.name} {el.surname}</option>
+                <option key={el} value={el.name + el.surname}> {el.name} {el.surname}</option>
             )
         })
     };
@@ -200,16 +201,20 @@ class EventForm extends Component {
         return (
             <>
                 <form onSubmit={this.submitHandler} className={"eventForm"}>
-                    <label className={"eventFormLabel"}>Zastępowany
-                        <select name="inMinus" className={"eventFormSct"}
-                                onChange={this.inputHandler}>{this.selectPerson1()} </select>
+                    <label className={"eventFormLabel"}>Osoba zastępowana
+                        <select name="inMinus" className={"eventFormSct"} onChange={this.inputHandler}>
+                            <option value="" disabled selected hidden>Wybierz pracownika</option>
+                            {this.selectPerson1()}
+                        </select>
                     </label>
                     <input name="count" className={"eventFormInput"} onChange={this.hoursHandler}
                            placeholder="Ile godzin?">
                     </input>
-                    <label className={"eventFormLabel"}>Zastępujący
-                        <select name="inPlus" className={"eventFormSct"}
-                                onChange={this.inputHandler}>{this.selectPerson2()} </select>
+                    <label className={"eventFormLabel"}>Osoba zastępująca
+                        <select name="inPlus" className={"eventFormSct"} onChange={this.inputHandler}>
+                            <option value="" disabled selected hidden>Wybierz pracownika</option>
+                            {this.selectPerson2()}
+                        </select>
                     </label>
                     <button type="submit" className={"eventFormBtn"}>Zatwierdź</button>
                 </form>
@@ -236,21 +241,28 @@ class CalendarEventList extends Component {
     dayEvents = () => {
         let selectedDate = this.props.date.toLocaleDateString();
         return this.state.sub.map((el) => {
-            console.log(this.state.data().date);
-            // if (el.data().date == selectedDate) {
+            if (el.data().date.date === selectedDate) {
                 return (
                     <ul>
                         <li>
                             <div data-id={el.id}>
+                                <div>{el.data().date.date}</div>
                                 <div>{el.data().inMinus}</div>
                                 <div>{el.data().count}</div>
                                 <div>{el.data().inPlus}</div>
+                                <button onClick={this.eventDel} className={"eventFormBtnDel"}>Usuń</button>
                             </div>
                         </li>
                     </ul>
                 )
-            // }
+            }
         });
+    };
+    eventDel = (e) => {
+        const eventId = e.target.parentElement.getAttribute("data-id");
+        db.collection(`sub`).doc(eventId).delete();
+        e.target.parentElement.remove();
+        this.render()
     };
 
     render() {
@@ -260,6 +272,7 @@ class CalendarEventList extends Component {
             </>
         )
     }
+
     componentDidMount() {
         db.collection(`sub`).get().then((el) => {
             el.docs.map((doc) => {
@@ -271,34 +284,64 @@ class CalendarEventList extends Component {
     }
 }
 
-// class EventList extends Component {
-//     renderEvents = () => {
-//         return this.props.map((el) => {
-//             return <li>{el.data()}</li>
-//         })
-//     };
-//
-//     render() {
-//         return (
-//             <>
-//                 <h1>Data</h1>
-//                     {/*{this.props.data().date}*/}
-//                 <ul>
-//                     {this.renderEvents()}
-//                 </ul>
-//             </>
-//         )
-//     }
-// }
-
 class Users extends Component {
     render() {
         return (
             <div className={"users"}>
-                <AddUser/>
-                <UserList/>
+                <UsersPanel/>
             </div>
         )
+    }
+}
+
+class UsersPanel extends Component {
+    state = {
+        workingDays: 0
+    };
+    passWorkingDays = (days) => {
+        this.setState({workingDays: days})
+    };
+
+    render() {
+        return (
+            <div className={"usersPanel"}>
+                <WorkingDays update={this.passWorkingDays}/>
+                {/*<UsersFilter/>*/}
+                <AddUser workingDays = {this.state.workingDays}/>
+            </div>
+        )
+    }
+}
+
+class WorkingDays extends Component {
+    state = {
+        show: false,
+        workingDays: 0
+    };
+    inputHandler = (e) => {
+        this.setState({[e.target.name]: e.target.value});
+        this.props.update(this.state.workingDays)
+
+    };
+    showInput = () => {
+        this.setState({show: !this.state.show})
+    };
+
+    render() {
+        if (this.state.show) {
+            return (
+                <div className={"workingDays"}>
+                    <div onClick={this.showInput} className={"workingDaysVal"}>{this.state.workingDays}</div>
+                    <input type="number" name="workingDays" onChange={this.inputHandler}/>
+                </div>
+            )
+        } else {
+            return (
+                <div className={"workingDays"}>
+                    <div onClick={this.showInput} className={"workingDaysVal"}>{this.state.workingDays}</div>
+                </div>
+            )
+        }
     }
 }
 
@@ -319,29 +362,38 @@ class AddUser extends Component {
             return (
                 <>
                     <button className={"addUser"} onClick={this.showForm}></button>
-                    <AddUserForm/>
+                    <AddUserForm workingDays = {this.props.workingDays}/>
+                    <UserList/>
                 </>
             )
         } else {
-            return <button className={"addUser"} onClick={this.showForm}></button>
+            return (
+                <>
+                    <button className={"addUser"} onClick={this.showForm}></button>
+                    <UserList/>
+                </>
+            )
         }
     }
 }
 
 class AddUserForm extends Component {
     state = {
-        userId: "",
         name: "",
         surname: "",
         dailyTime: 0,
         totalTime: 0,
-        inPlus: 0,
-        inMinus: 0
+        subs: [],
+    };
+    countTotal = () => {
+        let total = this.state.dailyTime*this.props.workingDays;
+      return this.setState({ totalTime : {total}})
     };
     inputHandler = (e) => {
         this.setState({
             [e.target.name]: e.target.value
         });
+        this.countTotal();
     };
     clearForm = () => {
         document.querySelector("name").value = "";
@@ -354,6 +406,7 @@ class AddUserForm extends Component {
             return alert("Pola Imię oraz Nazwisko muszą być uzupełnione!")
         } else {
             e.preventDefault();
+
             db.collection(`users`).add(this.state);
             alert("Dodano nowego użytkownika!");
             this.clearForm();
@@ -362,7 +415,7 @@ class AddUserForm extends Component {
 
     render() {
         return (
-            <form className={"addUserForm"}>
+            <form className={"addUserForm"} onSubmit={this.add}>
                 <label className={"addUserLabel"}> Imię
                     <input onChange={this.inputHandler} name="name" type="text" id="name" className={"addUserInput"}/>
                 </label>
@@ -374,7 +427,7 @@ class AddUserForm extends Component {
                     <input onChange={this.inputHandler} name="dailyTime" type="number" id="dailyTime"
                            className={"addUserInput"}/>
                 </label>
-                <button className={"addUserBtn"} onClick={this.add}>Dodaj</button>
+                <button className={"addUserBtn"} type="submit">Dodaj</button>
             </form>
         )
     }
@@ -383,6 +436,7 @@ class AddUserForm extends Component {
 class UserList extends Component {
     state = {
         users: [],
+        showMore: false
     };
     // edit = () => {
     //     let id  = e.target.closest("li").getAttribute("data-id");
@@ -393,18 +447,50 @@ class UserList extends Component {
         e.target.closest("li").remove();
         db.collection(`users`).doc(id).delete();
     };
+    showMore = (e) => {
+        e.preventDefault();
+        this.setState({showMore: !this.state.showMore});
+    };
     renderUsers = () => {
         return this.state.users.map((el) => {
-            return (
-                <li key="el" data-id={el.id} className={"userListEl"}>
-                    <div className={"userListName"}>{el.data().name}</div>
-                    <div className={"userListSurname"}>{el.data().surname}</div>
-                    <div className={"userListSub"}>
+            if (this.state.showMore) {
+                return (
+                    <li key="el" data-id={el.id} className={"userListEl"}>
+                        <div className={"userListName"}>{el.data().name}</div>
+                        <div className={"userListSurname"}>{el.data().surname}</div>
                         <div className={"userListCount"}>{el.data().totalTime}</div>
-                    </div>
-                    <button className={"userListDelete"} onClick={this.delete}>Delete</button>
-                </li>
-            )
+                        <button className={"userListBtn"} onClick={this.showMore}>Pokaż więcej</button>
+                        <button className={"userListDelete"} onClick={this.delete}>Delete</button>
+                    </li>
+                )
+            } else {
+                return (
+                    <li key="el" data-id={el.id} className={"userListEl"}>
+                        <div className={"userListName"}>{el.data().name}</div>
+                        <div className={"userListSurname"}>{el.data().surname}</div>
+                        <div className={"userListCount"}>{el.data().totalTime}</div>
+                        <table className={"userListTab"}>
+                            <thead>
+                            <tr>
+                                <td>Date</td>
+                                <td>Count</td>
+                                <td>inMinus => inPlus</td>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                            </tr>
+                            </tbody>
+                        </table>
+                        <button className={"userListBtn"} onClick={this.showMore}>Pokaż mniej</button>
+                        <button className={"userListDelete"} onClick={this.delete}>Delete</button>
+                    </li>
+                )
+
+            }
         });
     };
 
@@ -414,6 +500,7 @@ class UserList extends Component {
                 <ul>
                     {this.renderUsers()}
                 </ul>
+                {/*<User users = {this.state.users} />*/}
             </div>
         )
     }
@@ -424,7 +511,6 @@ class UserList extends Component {
                     this.setState({
                         users: this.state.users.concat(doc),
                     });
-                    // this.props.liftUsers(this.state.users);
                 })
             }
         );
@@ -432,86 +518,36 @@ class UserList extends Component {
 }
 
 // class User extends Component {
-//     render() {
-//         return (
-//             <li key="el" data-id={el.id} className={"user__tile"}>
-//                 <div className={"user__tile__name"}>{el.data().name}</div>
-//                 <div className={"user__tile__surname"}>{el.data().surname}</div>
-//                 <div className={"user__tile__sub"}>
-//                     <div>
-//                         <div className={"user__tile__inPlus"}>{el.data().inPlus}</div>
-//                         <span className={"user__tile__spacer"}></span>
-//                         <div className={"user__tile__inMinus"}>{el.data().inMinus}</div>
-//                     </div>
-//                     <div className={"user__tile__total"}>{el.data().totalTime}</div>
-//                 </div>
-//                 <button className={"user__tile__delete"} onClick={this.delete}>Delete</button>
-//             </li>
-//         )
-//     }
-// }
-
-
-// class SubstituteList extends Component {
-//     state = {
-//         sub: []
-//     };
-//     renderSubs = () => {
-//         return this.state.sub.map((el) => {
-//                 return (
-//                     <li data-id={el.id}>
-//                         <div>{el.data().date}</div>
-//                         <div>Zastępujący {el.data().inPlus}</div>
-//                         <div>{el.data().count}</div>
-//                         <div>Zastępowany {el.data().inMinus}</div>
-//                     </li>
-//                 )
-//             }
-//         )
+//     renderUsers = () => {
+//             return (
+//                 <li key="el" data-id={this.props.users.id} className={"userListEl"}>
+//                     <div className={"userListName"}>{this.props.users.data().name}</div>
+//                     <div className={"userListSurname"}>{this.props.users.data().surname}</div>
+//                     <div className={"userListCount"}>{this.props.users.data().totalTime}</div>
+//                     <button className={"userListBtn"} onClick={"this.showMore"}>Pokaż więcej</button>
+//                     <button className={"userListDelete"} onClick={this.delete}>Delete</button>
+//                 </li>
+//             )
 //     };
 //
 //     render() {
 //         return (
 //             <div>
-//                 <ul>
-//                     {this.renderSubs()}
-//                 </ul>
-//                 <AddSubstitute users={this.state.users}/>
-//             </div>
-//         )
-//     }
 //
-//     componentDidMount() {
-//         const collection = db.collection(`sub`).get().then((el) => {
-//                 el.docs.map((doc) => {
-//                     console.log(doc.data());
-//                     this.setState({
-//                         sub: this.state.sub.concat(doc),
-//                     });
-//                 })
-//             }
-//         );
-//     }
-// }
-
-// class WorkingDays extends Component {
-//     state = {
-//         workingDays: 0
-//     };
-//     inputHandler = (e) => {
-//         this.setState({[e.target.name]: e.target.value})
-//     };
+//                     {this.renderUsers()}
 //
-//     render() {
-//         return (
-//             <div>
-//                 <div>{this.state.workingDays}</div>
-//                 <input type="number" name="workingDays" onChange={this.inputHandler}/>
-//                 <button>Zatwierdź</button>
 //             </div>
 //         );
 //     }
+//
 // }
 
 
-ReactDOM.render(<App/>, document.getElementById("app"));
+ReactDOM
+    .render(
+        <App/>,
+        document
+            .getElementById(
+                "app"
+            ))
+;
