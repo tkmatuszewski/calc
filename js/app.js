@@ -24,7 +24,7 @@ class AppContainer extends Component {
         return (
             <div className={"appContainer"}>
                 <CalendarToggle/>
-                <Users/>
+                <UserPart/>
             </div>
         )
     }
@@ -243,17 +243,15 @@ class CalendarEventList extends Component {
         return this.state.sub.map((el) => {
             if (el.data().date.date === selectedDate) {
                 return (
-                    <ul>
-                        <li>
-                            <div data-id={el.id}>
-                                <div>{el.data().date.date}</div>
-                                <div>{el.data().inMinus}</div>
-                                <div>{el.data().count}</div>
-                                <div>{el.data().inPlus}</div>
-                                <button onClick={this.eventDel} className={"eventFormBtnDel"}>Usuń</button>
-                            </div>
-                        </li>
-                    </ul>
+                    <li key={el}>
+                        <div data-id={el.id}>
+                            <div>{el.data().date.date}</div>
+                            <div>{el.data().inMinus}</div>
+                            <div>{el.data().count}</div>
+                            <div>{el.data().inPlus}</div>
+                            <button onClick={this.eventDel} className={"eventFormBtnDel"}>Usuń</button>
+                        </div>
+                    </li>
                 )
             }
         });
@@ -268,7 +266,9 @@ class CalendarEventList extends Component {
     render() {
         return (
             <>
-                {this.dayEvents()}
+                <ul>
+                    {this.dayEvents()}
+                </ul>
             </>
         )
     }
@@ -284,7 +284,7 @@ class CalendarEventList extends Component {
     }
 }
 
-class Users extends Component {
+class UserPart extends Component {
     render() {
         return (
             <div className={"users"}>
@@ -307,7 +307,7 @@ class UsersPanel extends Component {
             <div className={"usersPanel"}>
                 <WorkingDays update={this.passWorkingDays}/>
                 {/*<UsersFilter/>*/}
-                <AddUser workingDays = {this.state.workingDays}/>
+                <AddUser workingDays={this.state.workingDays}/>
             </div>
         )
     }
@@ -320,8 +320,7 @@ class WorkingDays extends Component {
     };
     inputHandler = (e) => {
         this.setState({[e.target.name]: e.target.value});
-        this.props.update(this.state.workingDays)
-
+        this.props.update(e.target.value)
     };
     showInput = () => {
         this.setState({show: !this.state.show})
@@ -362,15 +361,15 @@ class AddUser extends Component {
             return (
                 <>
                     <button className={"addUser"} onClick={this.showForm}></button>
-                    <AddUserForm workingDays = {this.props.workingDays}/>
-                    <UserList/>
+                    <AddUserForm />
+                    <UserList workingDays={this.props.workingDays}/>
                 </>
             )
         } else {
             return (
                 <>
                     <button className={"addUser"} onClick={this.showForm}></button>
-                    <UserList/>
+                    <UserList workingDays = {this.props.workingDays}/>
                 </>
             )
         }
@@ -386,8 +385,8 @@ class AddUserForm extends Component {
         subs: [],
     };
     countTotal = () => {
-        let total = this.state.dailyTime*this.props.workingDays;
-      return this.setState({ totalTime : {total}})
+        let total = this.state.dailyTime * this.props.workingDays;
+        return this.setState({totalTime: {total}})
     };
     inputHandler = (e) => {
         this.setState({
@@ -436,7 +435,39 @@ class AddUserForm extends Component {
 class UserList extends Component {
     state = {
         users: [],
-        showMore: false
+    };
+    renderUsers = () => {
+        return this.state.users.map((el) => {
+            return <User user={el} workingDays={this.props.workingDays}/>
+        })
+    };
+
+    render() {
+        return (
+            <div className={"user__tile__list"}>
+                <ul>
+                    {this.renderUsers()}
+                </ul>
+            </div>
+        )
+    }
+
+    componentDidMount() {
+        db.collection(`users`).get().then((el) => {
+                el.docs.map((doc) => {
+                    this.setState({
+                        users: this.state.users.concat(doc),
+                    });
+                })
+            }
+        );
+    };
+}
+
+class User extends Component {
+    state = {
+        showMore: false,
+        events: []
     };
     // edit = () => {
     //     let id  = e.target.closest("li").getAttribute("data-id");
@@ -451,97 +482,79 @@ class UserList extends Component {
         e.preventDefault();
         this.setState({showMore: !this.state.showMore});
     };
-    renderUsers = () => {
-        return this.state.users.map((el) => {
-            if (this.state.showMore) {
-                return (
-                    <li key="el" data-id={el.id} className={"userListEl"}>
-                        <div className={"userListName"}>{el.data().name}</div>
-                        <div className={"userListSurname"}>{el.data().surname}</div>
-                        <div className={"userListCount"}>{el.data().totalTime}</div>
-                        <button className={"userListBtn"} onClick={this.showMore}>Pokaż więcej</button>
-                        <button className={"userListDelete"} onClick={this.delete}>Delete</button>
-                    </li>
-                )
-            } else {
-                return (
-                    <li key="el" data-id={el.id} className={"userListEl"}>
-                        <div className={"userListName"}>{el.data().name}</div>
-                        <div className={"userListSurname"}>{el.data().surname}</div>
-                        <div className={"userListCount"}>{el.data().totalTime}</div>
-                        <table className={"userListTab"}>
-                            <thead>
-                            <tr>
-                                <td>Date</td>
-                                <td>Count</td>
-                                <td>inMinus => inPlus</td>
-                            </tr>
-                            </thead>
-                            <tbody>
-                            <tr>
-                                <td></td>
-                                <td></td>
-                                <td></td>
-                            </tr>
-                            </tbody>
-                        </table>
-                        <button className={"userListBtn"} onClick={this.showMore}>Pokaż mniej</button>
-                        <button className={"userListDelete"} onClick={this.delete}>Delete</button>
-                    </li>
-                )
-
-            }
-        });
-    };
 
     render() {
-        return (
-            <div className={"user__tile__list"}>
-                <ul>
-                    {this.renderUsers()}
-                </ul>
-                {/*<User users = {this.state.users} />*/}
-            </div>
-        )
+        if (this.state.showMore) {
+            return (
+                <li data-id={this.props.user.id} className={"userListEl"}>
+                    <div className={"userListName"}>{this.props.user.data().name}</div>
+                    <div className={"userListSurname"}>{this.props.user.data().surname}</div>
+                    <div className={"userListCount"}>{this.props.user.data().totalTime}</div>
+                    <button className={"userListBtn"} onClick={this.showMore}>Pokaż więcej</button>
+                    <button className={"userListDelete"} onClick={this.delete}>Delete</button>
+                </li>
+            )
+        } else {
+            return (
+                <li data-id={this.props.user.id} className={"userListEl"}>
+                    <div className={"userListName"}>{this.props.user.data().name}</div>
+                    <div className={"userListSurname"}>{this.props.user.data().surname}</div>
+                    <div className={"userListCount"}>{this.props.user.data().totalTime}</div>
+                    <button className={"userListBtn"} onClick={this.showMore}>Pokaż mniej</button>
+                    <button className={"userListDelete"} onClick={this.delete}>Delete</button>
+                    <UserEvents events={this.state.events}/>
+                </li>
+            )
+        }
     }
 
     componentDidMount() {
-        const collection = db.collection(`users`).get().then((el) => {
+        db.collection(`sub`).get().then((el) => {
                 el.docs.map((doc) => {
-                    this.setState({
-                        users: this.state.users.concat(doc),
-                    });
-                })
+                    this.setState({events: this.state.events.concat(doc.data())})
+                });
             }
-        );
+        )
     }
 }
 
-// class User extends Component {
-//     renderUsers = () => {
-//             return (
-//                 <li key="el" data-id={this.props.users.id} className={"userListEl"}>
-//                     <div className={"userListName"}>{this.props.users.data().name}</div>
-//                     <div className={"userListSurname"}>{this.props.users.data().surname}</div>
-//                     <div className={"userListCount"}>{this.props.users.data().totalTime}</div>
-//                     <button className={"userListBtn"} onClick={"this.showMore"}>Pokaż więcej</button>
-//                     <button className={"userListDelete"} onClick={this.delete}>Delete</button>
-//                 </li>
-//             )
-//     };
-//
-//     render() {
-//         return (
-//             <div>
-//
-//                     {this.renderUsers()}
-//
-//             </div>
-//         );
-//     }
-//
-// }
+class UserEvents extends Component {
 
+    eventhandler =()=>{
+      if(this.props.events.inPlus === this.props.user) {
+
+      }
+
+      if (this.props.events.inMinus === this.props.user) {
+          this.setState({count })
+      }
+
+
+    };
+    render() {
+    const event = this.props.events;
+        console.log(event);
+        return (
+            <table className={"userListTab"} key={event}>
+                <thead>
+                <tr>
+                    <td>Data</td>
+                    <td>Liczba godzin</td>
+                    <td>Osoby</td>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                    <td>{event.date}</td>
+                    <td>{event.count}</td>
+                    <td>{event.inMinus} => {event.inPlus}</td>
+                </tr>
+                </tbody>
+            </table>
+
+        )
+    }
+}
 
 ReactDOM
     .render(
