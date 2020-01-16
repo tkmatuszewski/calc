@@ -164,7 +164,7 @@ class EventForm extends Component {
     selectPerson1 = () => {
         return this.state.users.map((el) => {
             return (
-                <option key={el} value={el.name + el.surname}> {el.name} {el.surname}</option>
+                <option key={el.surname + "Zastępowany"}> {el.name} {el.surname}</option>
             )
         })
     };
@@ -204,6 +204,7 @@ class EventForm extends Component {
                     <label className={"eventFormLabel"}>Osoba zastępowana
                         <select name="inMinus" className={"eventFormSct"} onChange={this.inputHandler}>
                             <option value="" disabled selected hidden>Wybierz pracownika</option>
+                            <option value = "inne">Inne</option>
                             {this.selectPerson1()}
                         </select>
                     </label>
@@ -296,31 +297,36 @@ class UserPart extends Component {
 
 class UsersPanel extends Component {
     state = {
-        workingDays: 0
+        businessDays: 0
     };
-    passWorkingDays = (days) => {
-        this.setState({workingDays: days})
+    passBusinessDays = (days) => {
+        this.setState({businessDays: days})
     };
 
     render() {
         return (
             <div className={"usersPanel"}>
-                <WorkingDays update={this.passWorkingDays}/>
+                <BusinessDays update={this.passBusinessDays}/>
                 {/*<UsersFilter/>*/}
-                <AddUser workingDays={this.state.workingDays}/>
+                <AddUser businessDays={this.state.businessDays}/>
             </div>
         )
     }
 }
 
-class WorkingDays extends Component {
+class BusinessDays extends Component {
     state = {
         show: false,
-        workingDays: 0
+        businessDays: 0
     };
     inputHandler = (e) => {
         this.setState({[e.target.name]: e.target.value});
-        this.props.update(e.target.value)
+        this.props.update(e.target.value);
+    };
+    submitHandler = (e) => {
+        e.preventDefault();
+        db.collection(`businessDays`).doc("hvcziTCipJEMkNgYIxRt").set(this.state);
+        this.setState({show : false});
     };
     showInput = () => {
         this.setState({show: !this.state.show})
@@ -329,18 +335,27 @@ class WorkingDays extends Component {
     render() {
         if (this.state.show) {
             return (
-                <div className={"workingDays"}>
-                    <div onClick={this.showInput} className={"workingDaysVal"}>{this.state.workingDays}</div>
-                    <input type="number" name="workingDays" onChange={this.inputHandler}/>
+                <div className={"businessDays"}>
+                    <div onClick={this.showInput} className={"businessDaysVal"}>{this.state.businessDays}</div>
+                    <form onSubmit={this.submitHandler}>
+                        <input type="number" name="businessDays" onChange={this.inputHandler}/>
+                        <button>Zatwierdź</button>
+                    </form>
                 </div>
             )
         } else {
             return (
-                <div className={"workingDays"}>
-                    <div onClick={this.showInput} className={"workingDaysVal"}>{this.state.workingDays}</div>
+                <div className={"businessDays"}>
+                    <div onClick={this.showInput} className={"businessDaysVal"}>{this.state.businessDays}</div>
                 </div>
             )
         }
+    }
+    componentDidMount() {
+        db.collection(`businessDays`).doc("hvcziTCipJEMkNgYIxRt").get().then((doc)=> {
+            this.setState({businessDays: doc.data().businessDays});
+            this.props.update(this.state.businessDays);
+        });
     }
 }
 
@@ -362,14 +377,14 @@ class AddUser extends Component {
                 <>
                     <button className={"addUser"} onClick={this.showForm}></button>
                     <AddUserForm />
-                    <UserList workingDays={this.props.workingDays}/>
+                    <UserList businessDays={this.props.businessDays}/>
                 </>
             )
         } else {
             return (
                 <>
                     <button className={"addUser"} onClick={this.showForm}></button>
-                    <UserList workingDays = {this.props.workingDays}/>
+                    <UserList businessDays = {this.props.businessDays}/>
                 </>
             )
         }
@@ -381,11 +396,11 @@ class AddUserForm extends Component {
         name: "",
         surname: "",
         dailyTime: 0,
-        totalTime: 0,
+        totalTime: this.state.dailyTime*this.props.businessDays,
         subs: [],
     };
     countTotal = () => {
-        let total = this.state.dailyTime * this.props.workingDays;
+        let total = this.state.dailyTime * this.props.businessDays;
         return this.setState({totalTime: {total}})
     };
     inputHandler = (e) => {
@@ -436,9 +451,13 @@ class UserList extends Component {
     state = {
         users: [],
     };
+    countTotal = () => {
+        let total = this.state.dailyTime * this.props.businessDays;
+        return this.setState({totalTime: {total}})
+    };
     renderUsers = () => {
         return this.state.users.map((el) => {
-            return <User user={el} workingDays={this.props.workingDays}/>
+                return <User user={el} businessDays={this.props.businessDays}/>
         })
     };
 
@@ -467,7 +486,7 @@ class UserList extends Component {
 class User extends Component {
     state = {
         showMore: false,
-        events: []
+        events: [],
     };
     // edit = () => {
     //     let id  = e.target.closest("li").getAttribute("data-id");
@@ -482,14 +501,13 @@ class User extends Component {
         e.preventDefault();
         this.setState({showMore: !this.state.showMore});
     };
-
     render() {
         if (this.state.showMore) {
             return (
-                <li data-id={this.props.user.id} className={"userListEl"}>
+                <li key = {this.props.surname} data-id={this.props.user.id}  className={"userListEl"}>
                     <div className={"userListName"}>{this.props.user.data().name}</div>
                     <div className={"userListSurname"}>{this.props.user.data().surname}</div>
-                    <div className={"userListCount"}>{this.props.user.data().totalTime}</div>
+                    <TotalTime businessDays = {this.props.businessDays} dailyTime = {this.props.user.data().dailyTime}/>
                     <button className={"userListBtn"} onClick={this.showMore}>Pokaż więcej</button>
                     <button className={"userListDelete"} onClick={this.delete}>Delete</button>
                 </li>
@@ -499,7 +517,7 @@ class User extends Component {
                 <li data-id={this.props.user.id} className={"userListEl"}>
                     <div className={"userListName"}>{this.props.user.data().name}</div>
                     <div className={"userListSurname"}>{this.props.user.data().surname}</div>
-                    <div className={"userListCount"}>{this.props.user.data().totalTime}</div>
+                    <TotalTime businessDays = {this.props.businessDays} dailyTime = {this.props.user.data().dailyTime}/>
                     <button className={"userListBtn"} onClick={this.showMore}>Pokaż mniej</button>
                     <button className={"userListDelete"} onClick={this.delete}>Delete</button>
                     <UserEvents events={this.state.events}/>
@@ -517,23 +535,29 @@ class User extends Component {
         )
     }
 }
+class TotalTime extends Component{
+    render() {
+        return <div>
+            {this.props.businessDays*this.props.dailyTime}
+        </div>
+    }
+}
 
 class UserEvents extends Component {
 
-    eventhandler =()=>{
-      if(this.props.events.inPlus === this.props.user) {
-
-      }
-
-      if (this.props.events.inMinus === this.props.user) {
-          this.setState({count })
-      }
-
-
-    };
+    // eventhandler =()=>{
+    //
+    //   // if (this.props.events.inMinus === this.props.data()user.surname  {
+    //   //     this.setState({count : -this.state.count })
+    //   // }
+    //
+    //
+    // };
     render() {
     const event = this.props.events;
-        console.log(event);
+        // {if(this.props.events.inPlus === this.props.user.surname ) {
+        //     console.log("renderuj");
+        // }}
         return (
             <table className={"userListTab"} key={event}>
                 <thead>
@@ -547,7 +571,7 @@ class UserEvents extends Component {
                 <tr>
                     <td>{event.date}</td>
                     <td>{event.count}</td>
-                    <td>{event.inMinus} => {event.inPlus}</td>
+                    <td>{event.inMinus} {event.inPlus}</td>
                 </tr>
                 </tbody>
             </table>
