@@ -3,10 +3,6 @@ import ReactDOM from "react-dom";
 import Calendar from 'react-calendar';
 
 class App extends Component {
-    // getUsers = (users) => {
-    //     this.setState({users: users})
-    // };
-
     render() {
         return (
             <div className={"app"}>
@@ -204,7 +200,7 @@ class EventForm extends Component {
                     <label className={"eventFormLabel"}>Osoba zastępowana
                         <select name="inMinus" className={"eventFormSct"} onChange={this.inputHandler}>
                             <option value="" disabled selected hidden>Wybierz pracownika</option>
-                            <option value = "inne">Inne</option>
+                            <option value="inne">Inne</option>
                             {this.selectPerson1()}
                         </select>
                     </label>
@@ -243,27 +239,10 @@ class CalendarEventList extends Component {
         let selectedDate = this.props.date.toLocaleDateString();
         return this.state.sub.map((el) => {
             if (el.data().date.date === selectedDate) {
-                return (
-                    <li key={el}>
-                        <div data-id={el.id}>
-                            <div>{el.data().date.date}</div>
-                            <div>{el.data().inMinus}</div>
-                            <div>{el.data().count}</div>
-                            <div>{el.data().inPlus}</div>
-                            <button onClick={this.eventDel} className={"eventFormBtnDel"}>Usuń</button>
-                        </div>
-                    </li>
-                )
+                return <Event event = {el} />
             }
         });
     };
-    eventDel = (e) => {
-        const eventId = e.target.parentElement.getAttribute("data-id");
-        db.collection(`sub`).doc(eventId).delete();
-        e.target.parentElement.remove();
-        this.render()
-    };
-
     render() {
         return (
             <>
@@ -282,6 +261,29 @@ class CalendarEventList extends Component {
                 });
             })
         })
+    }
+}
+
+class Event extends Component {
+    eventDelete = (e) => {
+        const eventId = e.target.parentElement.getAttribute("data-id");
+        db.collection(`sub`).doc(eventId).delete();
+        e.target.parentElement.remove();
+        this.render()
+    };
+    render() {
+        let event = this.props.event;
+        return (
+            <li key={event}>
+                <div data-id={event.id}>
+                    <div>{event.data().date.date}</div>
+                    <div>{event.data().inMinus}</div>
+                    <div>{event.data().count}</div>
+                    <div>{event .data().inPlus}</div>
+                    <button onClick={this.eventDelete} className={"eventFormBtnDel"}>Usuń</button>
+                </div>
+            </li>
+        )
     }
 }
 
@@ -326,7 +328,7 @@ class BusinessDays extends Component {
     submitHandler = (e) => {
         e.preventDefault();
         db.collection(`businessDays`).doc("hvcziTCipJEMkNgYIxRt").set(this.state);
-        this.setState({show : false});
+        this.setState({show: false});
     };
     showInput = () => {
         this.setState({show: !this.state.show})
@@ -351,8 +353,9 @@ class BusinessDays extends Component {
             )
         }
     }
+
     componentDidMount() {
-        db.collection(`businessDays`).doc("hvcziTCipJEMkNgYIxRt").get().then((doc)=> {
+        db.collection(`businessDays`).doc("hvcziTCipJEMkNgYIxRt").get().then((doc) => {
             this.setState({businessDays: doc.data().businessDays});
             this.props.update(this.state.businessDays);
         });
@@ -376,7 +379,7 @@ class AddUser extends Component {
             return (
                 <>
                     <button className={"addUser"} onClick={this.showForm}></button>
-                    <AddUserForm />
+                    <AddUserForm/>
                     <UserList businessDays={this.props.businessDays}/>
                 </>
             )
@@ -384,7 +387,7 @@ class AddUser extends Component {
             return (
                 <>
                     <button className={"addUser"} onClick={this.showForm}></button>
-                    <UserList businessDays = {this.props.businessDays}/>
+                    <UserList businessDays={this.props.businessDays}/>
                 </>
             )
         }
@@ -396,7 +399,7 @@ class AddUserForm extends Component {
         name: "",
         surname: "",
         dailyTime: 0,
-        totalTime: this.state.dailyTime*this.props.businessDays,
+        totalTime: this.state.dailyTime * this.props.businessDays,
         subs: [],
     };
     countTotal = () => {
@@ -451,13 +454,9 @@ class UserList extends Component {
     state = {
         users: [],
     };
-    countTotal = () => {
-        let total = this.state.dailyTime * this.props.businessDays;
-        return this.setState({totalTime: {total}})
-    };
     renderUsers = () => {
         return this.state.users.map((el) => {
-                return <User user={el} businessDays={this.props.businessDays}/>
+            return <User user={el} businessDays={this.props.businessDays}/>
         })
     };
 
@@ -501,13 +500,14 @@ class User extends Component {
         e.preventDefault();
         this.setState({showMore: !this.state.showMore});
     };
+
     render() {
         if (this.state.showMore) {
             return (
-                <li key = {this.props.surname} data-id={this.props.user.id}  className={"userListEl"}>
+                <li key={this.props.surname} data-id={this.props.user.id} className={"userListEl"}>
                     <div className={"userListName"}>{this.props.user.data().name}</div>
                     <div className={"userListSurname"}>{this.props.user.data().surname}</div>
-                    <TotalTime businessDays = {this.props.businessDays} dailyTime = {this.props.user.data().dailyTime}/>
+                    <TotalTime businessDays={this.props.businessDays} dailyTime={this.props.user.data().dailyTime}/>
                     <button className={"userListBtn"} onClick={this.showMore}>Pokaż więcej</button>
                     <button className={"userListDelete"} onClick={this.delete}>Delete</button>
                 </li>
@@ -517,10 +517,10 @@ class User extends Component {
                 <li data-id={this.props.user.id} className={"userListEl"}>
                     <div className={"userListName"}>{this.props.user.data().name}</div>
                     <div className={"userListSurname"}>{this.props.user.data().surname}</div>
-                    <TotalTime businessDays = {this.props.businessDays} dailyTime = {this.props.user.data().dailyTime}/>
+                    <TotalTime businessDays={this.props.businessDays} dailyTime={this.props.user.data().dailyTime}/>
                     <button className={"userListBtn"} onClick={this.showMore}>Pokaż mniej</button>
                     <button className={"userListDelete"} onClick={this.delete}>Delete</button>
-                    <UserEvents events={this.state.events}/>
+                    <UserEvents events={this.state.events} user={this.props.user.data()}/>
                 </li>
             )
         }
@@ -535,48 +535,73 @@ class User extends Component {
         )
     }
 }
-class TotalTime extends Component{
+
+class TotalTime extends Component {
+    countUpdate = (count) => {
+      this.setState({additionalCount : count})
+    };
     render() {
         return <div>
-            {this.props.businessDays*this.props.dailyTime}
+            {this.props.businessDays * this.props.dailyTime}
         </div>
     }
 }
 
 class UserEvents extends Component {
+    state = {
+      count : 0
+    };
+    inPlusHandler =()=> {
+        this.setState({count : this.state.count + el.count });
+    };
+    inMinusHandler = () => {
 
-    // eventhandler =()=>{
-    //
-    //   // if (this.props.events.inMinus === this.props.data()user.surname  {
-    //   //     this.setState({count : -this.state.count })
-    //   // }
-    //
-    //
-    // };
+    };
     render() {
-    const event = this.props.events;
-        // {if(this.props.events.inPlus === this.props.user.surname ) {
-        //     console.log("renderuj");
-        // }}
-        return (
-            <table className={"userListTab"} key={event}>
-                <thead>
-                <tr>
-                    <td>Data</td>
-                    <td>Liczba godzin</td>
-                    <td>Osoby</td>
-                </tr>
-                </thead>
-                <tbody>
-                <tr>
-                    <td>{event.date}</td>
-                    <td>{event.count}</td>
-                    <td>{event.inMinus} {event.inPlus}</td>
-                </tr>
-                </tbody>
-            </table>
-
-        )
+        return this.props.events.map((el) => {
+                const user = this.props.user;
+                if (el.inPlus === user.name + user.surname) {
+                    return (
+                        <table className={"userListTab"} key={el.inPlus}>
+                            <thead>
+                            <tr>
+                                <td>Data</td>
+                                <td>Liczba godzin</td>
+                                <td>Osoby</td>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr>
+                                <td>{el.date.date}</td>
+                                <td>{el.count}</td>
+                                <td>{el.inMinus}</td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    )
+                }
+                if (el.inMinus === user.name + user.surname) {
+                    return (
+                        <table className={"userListTab"} key={el.inPlus}>
+                            <thead>
+                            <tr>
+                                <td>Data</td>
+                                <td>Liczba godzin</td>
+                                <td>Osoby</td>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr>
+                                <td>{el.date.date}</td>
+                                <td>{el.count}</td>
+                                <td>{el.inMinus}</td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    )
+                }
+            }
+        );
     }
 }
 
