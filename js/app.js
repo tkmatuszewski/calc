@@ -12,20 +12,25 @@ class App extends Component {
                     </div>
                 </div>
                 <AppContainer/>
-                <div className={"appFooter"}> tkmatuszewski 	&copy;2020;</div>
+                <div className={"appFooter"}> tkmatuszewski &copy;2020</div>
             </div>)
     }
 }
 
 class AppContainer extends Component {
     state = {
-        users: []
+        key: 0
+    };
+    liveR = () => {
+        this.setState({
+            key: Math.random()
+        });
     };
 
     render() {
         return (
             <div className={"appContainer"}>
-                <CalendarToggle/>
+                <CalendarToggle liveR={this.liveR}/>
                 <UserPart/>
             </div>
         )
@@ -51,7 +56,7 @@ class CalendarToggle extends Component {
                     <div className={"calendarToggle"} onClick={this.showCalendar}>
                         <div className={"calendarToggleIconHide"}/>
                     </div>
-                    <CalendarPart/>
+                    <CalendarPart liveR={this.props.liveR}/>
                 </>
             )
         } else {
@@ -69,18 +74,19 @@ class CalendarPart extends Component {
         date: new Date(),
     };
     onChange = date => this.setState({date});
-    tileContent = (date,view) => {
-        if(view === `month`  && date.getDay() === 0) {
+    tileContent = (date, view) => {
+        if (view === `month` && date.getDay() === 0) {
             return console.log('date');
         }
     };
+
     render() {
         return (
             <div className={"calendarPart"}>
                 <Calendar
                     onChange={this.onChange}
                     value={this.state.date}/>
-                <CalendarEvents date={this.state.date} tileContent = {this.tileContent}/>
+                <CalendarEvents date={this.state.date} tileContent={this.tileContent}/>
             </div>
         );
     }
@@ -101,7 +107,8 @@ class CalendarEvents extends Component {
             <div className={"calendarEvents"}>
                 <div className={"calendarEventsCnt"}>
                     <CalendarDate date={this.props.date}/>
-                    <AddEvent date={this.props.date} onAdded={this.onAdded} tileContent={this.tileContent}/>
+                    <AddEvent date={this.props.date} onAdded={this.onAdded}
+                              liveR={this.props.liveR} tileContent={this.tileContent}/>
                     <CalendarEventList date={this.props.date} key={this.state.key}/>
                 </div>
             </div>
@@ -160,7 +167,8 @@ class AddEvent extends Component {
             return (
                 <>
                     <button className={"addEventBtn"} onClick={this.showForm}>Dodaj zastępstwo</button>
-                    <EventForm date={this.props.date} hide={this.passToggle} onAdded={this.props.onAdded}/>
+                    <EventForm date={this.props.date} hide={this.passToggle} onAdded={this.props.onAdded}
+                               liveR={this.props.liveR}/>
                 </>
             )
         } else {
@@ -169,6 +177,7 @@ class AddEvent extends Component {
     }
 }
 
+//poprawić select
 class EventForm extends Component {
     state = {
         date: "",
@@ -180,19 +189,19 @@ class EventForm extends Component {
     };
     setDate = () => {
         const date = this.props.date.toLocaleDateString();
-        this.setState({date: {date}})
+        this.setState({date: date})
     };
     selectPerson1 = () => {
         return this.state.users.map((el) => {
             return (
-                <option key={Math.random()}> {el.fullName} </option>
+                <option key={Math.random()} value={el.fullName}>{el.fullName}</option>
             )
         })
     };
     selectPerson2 = () => {
         return this.state.users.map((el) => {
             return (
-                <option key={Math.random()}> {el.fullName} </option>
+                <option key={Math.random()} value={el.fullName}>{el.fullName}</option>
             )
         })
     };
@@ -218,6 +227,7 @@ class EventForm extends Component {
             this.props.hide();
             db.collection(`sub`).add(this.state);
             alert("Dodano nowe zastępstwo!");
+            this.props.liveR();
             this.props.tileContent(this.state.date, month);
         }
     };
@@ -231,9 +241,9 @@ class EventForm extends Component {
             <div className={"eventFormContainer"}>
                 <form onSubmit={this.submitHandler} className={"eventForm"}>
                     <label className={"eventFormLabel"}>Osoba zastępowana
-                        <select name="inMinus" className={"eventFormSct"} onChange={this.inputHandler} >
-                            <option value="" selected disabled hidden>Wybierz pracownika</option>
-                            <option value="">Inne</option>
+                        <select name="inMinus" className={"eventFormSct"} onChange={this.inputHandler}>
+                            <option value="" selected="selected">Wybierz pracownika</option>
+                            <option value="Inne">Inne</option>
                             {this.selectPerson1()}
                         </select>
                     </label>
@@ -272,7 +282,7 @@ class CalendarEventList extends Component {
     dayEvents = () => {
         let selectedDate = this.props.date.toLocaleDateString();
         return this.state.sub.map((el) => {
-            if (el.data().date.date === selectedDate) {
+            if (el.data().date === selectedDate) {
                 return <Event event={el} key={Math.random()}/>
             }
         });
@@ -565,6 +575,7 @@ class User extends Component {
     state = {
         showMore: false,
         events: [],
+        bonusHours: 0
     };
     // edit = () => {
     //     let id  = e.target.closest("li").getAttribute("data-id");
@@ -573,26 +584,26 @@ class User extends Component {
     additionalCount = () => {
         const user = this.props.user.data();
         let counter = 0;
-        console.log(user);
         this.state.events.forEach(event => {
-            if (event.inPlus == user.fullName) {
-                console.log("count", event.count);
-                counter += event.count;
-                // this.setState({added : this.state.added + event.count});
-                // console.log(user.state.added);
+            if (event.inPlus === user.fullName) {
+                counter += Number(event.count);
+            }
+            if (event.inMinus === user.fullName) {
+                counter -= Number(event.count);
             }
         });
-        this.setState({added: counter})
+        this.setState({bonusHours: Number(counter)});
+        console.log(this.state.bonusHours);
     };
     delete = (e) => {
         let id = e.target.closest("li").getAttribute("data-id");
         e.target.closest("li").remove();
         db.collection(`users`).doc(id).delete();
     };
-    showMore = (e) => {
-        e.preventDefault();
-        this.setState({showMore: !this.state.showMore});
-    };
+    // showMore = (e) => {
+    //     e.preventDefault();
+    //     this.setState({showMore: !this.state.showMore});
+    // };
 
     render() {
         if (this.state.showMore) {
@@ -603,7 +614,8 @@ class User extends Component {
                             <div className={"userName"}>{this.props.user.data().name}</div>
                             <div className={"userSurname"}>{this.props.user.data().surname}</div>
                         </div>
-                        <TotalTime businessDays={this.props.businessDays} dailyTime={this.props.user.data().dailyTime}/>
+                        <TotalTime businessDays={this.props.businessDays} dailyTime={this.props.user.data().dailyTime}
+                                   bonusHours={this.state.bonusHours}/>
                         <div className={"userButtons"}>
                             {/*<button className={"userListBtn"} onClick={this.showMore}>Pokaż więcej</button>*/}
                             <button className={"userDelete"} onClick={this.delete}/>
@@ -621,7 +633,8 @@ class User extends Component {
                                 <div className={"userSurname"}>{this.props.user.data().surname}</div>
                             </div>
                             <TotalTime businessDays={this.props.businessDays}
-                                       dailyTime={this.props.user.data().dailyTime}/>
+                                       dailyTime={this.props.user.data().dailyTime}
+                                       bonusHours={this.state.bonusHours}/>
                             <div className={"userButtons"}>
                                 {/*<button className={"userListBtn"} onClick={this.showMore}>Pokaż więcej</button>*/}
                                 <button className={"userDelete"} onClick={this.delete}/>
@@ -654,14 +667,10 @@ class User extends Component {
 }
 
 class TotalTime extends Component {
-    // countUpdate = (count) => {
-    //     this.setState({additionalCount: count})
-    // };
-
     render() {
-        return <div className={"totalTime"}>
-            {this.props.businessDays * this.props.dailyTime}
-        </div>
+        let totalTime = this.props.businessDays * this.props.dailyTime + this.props.bonusHours;
+        console.log(totalTime);
+        return <div className={"totalTime"}> {totalTime} </div>
     }
 }
 
@@ -669,31 +678,28 @@ class UserEvents extends Component {
     state = {
         count: 0
     };
-    addCount = (count) => {
-        return this.setState({count: count})
-    };
 
     render() {
         return this.props.events.map((el) => {
                 const user = this.props.user;
-                const day = el.date.date;
-                const date = day.split(".")[0];
+                const day = el.date;
+                // const date = day.split(".")[0];
                 const nameMinus = el.inMinus.split(" ")[0];
                 const namePlus = el.inPlus.split(" ")[0];
 
-                if (el.inPlus == user.fullName) {
+                if (el.inPlus === user.fullName) {
                     return (
                         <div className={"userEvents"} key={Math.random()}>
-                            <div className={"userEventsDate"}>{date}</div>
+                            <div className={"userEventsDate"}>{day}</div>
                             <div className={"userEventsCountPlus"}>+{el.count}</div>
                             <div className={"userEventsInMinus"}>{nameMinus}</div>
                         </div>
                     )
                 }
-                if (el.inMinus == user.fullName) {
+                if (el.inMinus === user.fullName) {
                     return (
                         <div className={"userEvents"} key={Math.random()}>
-                            <div className={"userEventsDate"}>{date}</div>
+                            <div className={"userEventsDate"}>{day}</div>
                             <div className={"userEventsCountMinus"}>-{el.count}</div>
                             <div className={"userEventsInMinus"}>{namePlus}</div>
                         </div>
